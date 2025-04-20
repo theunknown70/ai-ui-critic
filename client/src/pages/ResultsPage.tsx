@@ -1,5 +1,6 @@
-// src/pages/ResultsPage.tsx
 import React, { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Typography,
   Container,
@@ -9,162 +10,165 @@ import {
   Paper,
   Grid,
 } from '@mui/material';
-import { useParams, useLocation } from 'react-router-dom';
-import axios from 'axios'; // Make sure axios is imported
+import { useTheme, alpha } from '@mui/material/styles';
+import PaletteIcon from '@mui/icons-material/Palette';
+import InsightsIcon from '@mui/icons-material/Insights';
+import ScienceIcon from '@mui/icons-material/Science';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import { useLocation } from 'react-router-dom';
+import axios from 'axios';
 
 interface ContrastResult {
   status: 'Pass' | 'Fail' | 'Needs Review';
   notes: string;
-  // Potentially add specific element details if analysis was deeper
 }
 
+type MarkdownRendererProps = {
+  text: string;
+};
+
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ text }) => (
+  <ReactMarkdown
+    children={text}
+    remarkPlugins={[remarkGfm]}
+    components={{
+      p: ({ node, ...props }) => (
+        <Typography
+          variant="body2"
+          sx={{ whiteSpace: 'pre-wrap', mt: 1 }}
+          {...props}
+        />
+      ),
+      strong: ({ node, ...props }) => (
+        <Typography component="span" sx={{ fontWeight: 'bold' }} {...props} />
+      ),
+      em: ({ node, ...props }) => (
+        <Typography component="span" sx={{ fontStyle: 'italic' }} {...props} />
+      ),
+      ul: ({ node, ...props }) => (
+        <Box component="ul" sx={{ mt: 1, pl: 2 }} {...props} />
+      ),
+      ol: ({ node, ...props }) => (
+        <Box component="ol" sx={{ mt: 1, pl: 2 }} {...props} />
+      ),
+      li: ({ node, ...props }) => (
+        <Typography
+          component="li"
+          variant="body2"
+          sx={{ mt: 1, pl: 0 }}
+          {...props}
+        />
+      ),
+    }}
+  />
+);
+
 const ResultsPage: React.FC = () => {
-  const { id } = useParams(); // Get the ID from the URL
-  const location = useLocation(); // Get state passed during navigation
-  const [imageUrl, setImageUrl] = useState<string | null>(
-    location.state?.imageUrl || null
-  );
-  const [loading, setLoading] = useState<boolean>(!imageUrl); // Start loading if no URL passed
+  const theme = useTheme();
+  const location = useLocation();
+  const imageUrl = (location.state as any)?.imageUrl;
+
+  const [loading, setLoading] = useState<boolean>(!imageUrl);
   const [error, setError] = useState<string | null>(null);
+
   const [contrastResult, setContrastResult] = useState<ContrastResult | null>(
     null
   );
   const [isAnalyzingContrast, setIsAnalyzingContrast] =
     useState<boolean>(false);
+
   const [journeyAnalysis, setJourneyAnalysis] = useState<string | null>(null);
   const [isAnalyzingJourney, setIsAnalyzingJourney] = useState<boolean>(false);
   const [journeyError, setJourneyError] = useState<string | null>(null);
+
   const [abSuggestions, setAbSuggestions] = useState<string | null>(null);
   const [isGeneratingAB, setIsGeneratingAB] = useState<boolean>(false);
   const [abError, setAbError] = useState<string | null>(null);
 
-  // TODO: Fetch analysis results from backend using the 'id'
+  const [afterImageUrl, setAfterImageUrl] = useState<string | null>(null);
+  const [isGeneratingVariant, setIsGeneratingVariant] =
+    useState<boolean>(false);
+  const [variantError, setVariantError] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!imageUrl && id) {
-      // If imageUrl wasn't passed via state, you might need to fetch
-      // details from the backend using the id.
-      // For now, we assume it was passed or show an error.
-      console.log(`Workspaceing results for ID: ${id}`);
-      // Example: fetch(`/api/results/${id}`).then(...).then(data => setImageUrl(data.imageUrl))
-      // Simulate loading/error if not passed
+    if (!imageUrl) {
       setError('Image URL not found. Cannot display results.');
       setLoading(false);
-    } else if (imageUrl) {
-      setLoading(false); // Image URL was passed, stop loading indicator
+      return;
     }
-    // Placeholder: Trigger fetching other analysis data here
-    // fetchAnalysisData(id);
+    setLoading(false);
 
-    const fetchAnalysisData = async (
-      analysisId: string | undefined,
-      imgUrl: string | null
-    ) => {
-      if (!analysisId || !imgUrl) return;
-
-      // --- Trigger Contrast Analysis (keep existing simulation or make real API call) ---
-      // Reset all states on new analysis fetch
+    const fetchAnalysisData = async (imgUrl: string) => {
       setIsAnalyzingContrast(true);
-      setContrastResult(null);
       setIsAnalyzingJourney(true);
-      setJourneyAnalysis(null);
-      setJourneyError(null);
       setIsGeneratingAB(true);
-      setAbSuggestions(null);
-      setAbError(null);
+      setIsGeneratingVariant(true);
 
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5 second delay
-
-      // TODO: Replace with actual API call:
-      // try {
-      //   const response = await axios.get(`/api/results/${analysisId}/contrast`);
-      //   setContrastResult(response.data);
-      // } catch (err) {
-      //   console.error("Failed to fetch contrast results:", err);
-      //   setContrastResult({ status: 'Needs Review', notes: 'Error fetching contrast analysis.' });
-      // }
-
-      // --- Mock Result ---
-      const mockPass = Math.random() > 0.4; // Simulate pass/fail
+      // Simulate contrast API
+      await new Promise((r) => setTimeout(r, 1500));
+      const mockPass = true;
       setContrastResult({
         status: mockPass ? 'Pass' : 'Fail',
         notes: mockPass
-          ? 'Overall contrast appears adequate based on initial scan. Review specific text elements for WCAG AA/AAA compliance.'
-          : 'Potential contrast issues detected. Check low-contrast text (e.g., light gray on white) or text over complex backgrounds.',
+          ? 'Overall contrast appears adequate. Review specific text elements for WCAG AA/AAA compliance.'
+          : 'Potential contrast issues detected. Check low-contrast text or text over complex backgrounds.',
       });
-      // --- End Mock Result ---
-      setIsAnalyzingContrast(false); // Assuming it finishes
+      setIsAnalyzingContrast(false);
 
-      // --- Trigger Journey Analysis ---
-      setIsAnalyzingJourney(true);
-      setJourneyAnalysis(null);
-      setJourneyError(null);
+      const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5001';
       try {
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-        const response = await axios.post(`${apiUrl}/api/analyze/journey`, {
+        const journeyRes = await axios.post(`${apiBase}/api/analyze/journey`, {
           imageUrl: imgUrl,
-          analysisId: analysisId,
-          // context: "Optional context about the design goal"
         });
-        setJourneyAnalysis(response.data.journeyAnalysis);
+        setJourneyAnalysis(journeyRes.data.journeyAnalysis);
       } catch (err: any) {
-        console.error('Failed to fetch journey analysis:', err);
-        let errorMessage = 'Failed to get journey analysis.';
-        if (axios.isAxiosError(err) && err.response) {
-          errorMessage = err.response.data?.message || errorMessage;
-        } else if (err instanceof Error) {
-          errorMessage = err.message;
-        }
-        setJourneyError(errorMessage);
-        setJourneyAnalysis(null); // Clear any potential stale data
+        setJourneyError(
+          err?.response?.data?.message ||
+            err.message ||
+            'Failed to get journey analysis.'
+        );
       } finally {
         setIsAnalyzingJourney(false);
       }
-      // --- Trigger A/B Test Generation ---
+
       try {
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-        // You could potentially pass specific element details if identified
-        const abResponse = await axios.post(`${apiUrl}/api/generate/abtest`, {
+        const abRes = await axios.post(`${apiBase}/api/generate/abtest`, {
           imageUrl: imgUrl,
-          analysisId: analysisId,
-          // elementType: 'button', elementDescription: 'Primary CTA' // Example
         });
-        setAbSuggestions(abResponse.data.abTestSuggestions);
+        setAbSuggestions(abRes.data.abTestSuggestions);
       } catch (err: any) {
-        console.error('Failed to fetch A/B suggestions:', err);
-        let errorMessage = 'Failed to get A/B suggestions.';
-        if (axios.isAxiosError(err) && err.response) {
-          errorMessage = err.response.data?.message || errorMessage;
-        } else if (err instanceof Error) {
-          errorMessage = err.message;
-        }
-        setAbError(errorMessage);
+        setAbError(
+          err?.response?.data?.message ||
+            err.message ||
+            'Failed to get A/B suggestions.'
+        );
       } finally {
         setIsGeneratingAB(false);
       }
+
+      try {
+        const varRes = await axios.post(
+          `${apiBase}/api/generate/variant-image`,
+          { imageUrl: imgUrl }
+        );
+        setAfterImageUrl(varRes.data.variantImageUrl);
+      } catch (err: any) {
+        setVariantError(
+          err?.response?.data?.message ||
+            err.message ||
+            'Failed to generate variant image'
+        );
+      } finally {
+        setIsGeneratingVariant(false);
+      }
     };
 
-    // Only fetch if we have the necessary info
-    if (id && imageUrl) {
-      fetchAnalysisData(id, imageUrl);
-    } else if (!imageUrl && id) {
-      // Handle case where image URL needs fetching first (more complex setup)
-      setError('Image URL missing, cannot start analysis.');
-      setLoading(false);
-    }
-    // Prevent cleanup function from running on initial mount if not needed
-    // return () => { /* cleanup if necessary */ };
-  }, [id, imageUrl]); // Re-run if id changes
-
-  // Assuming imageUrl holds the primary image URL
-  const beforeImageUrl = imageUrl; // The original
-  const [afterImageUrl, setAfterImageUrl] = useState<string | null>(null); // State for the 'after' image (e.g., from A/B test variant)
-
-  // TODO: Fetch or generate the 'after' image URL based on analysis/variants later
+    fetchAnalysisData(imageUrl);
+  }, [imageUrl]);
 
   if (loading) {
     return (
-      <Container sx={{ textAlign: 'center', mt: 5 }}>
+      <Container sx={{ textAlign: 'center', mt: 6 }}>
         <CircularProgress />
       </Container>
     );
@@ -172,179 +176,311 @@ const ResultsPage: React.FC = () => {
 
   if (error) {
     return (
-      <Container>
+      <Container sx={{ mt: 4 }}>
         <Alert severity="error">{error}</Alert>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg">
-      {' '}
-      {/* Usually results need more space */}
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Analysis Results for Design {id}
+    <Container component="main" sx={{ py: 4 }} maxWidth="xl">
+      <Box sx={{ textAlign: 'center', mb: 2, mt:-2 }}>
+        <Typography
+          variant="h3"
+          component="h1"
+          gutterBottom
+          sx={{
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            position: 'relative',
+            '&:after': {
+              content: '""',
+              display: 'block',
+              width: 80,
+              height: 4,
+              background: theme.palette.primary.main,
+              mx: 'auto',
+              mt: 2,
+              borderRadius: 2,
+            },
+          }}
+        >
+          Design Insights
         </Typography>
+      </Box>
 
-        {/* Side-by-Side Image View */}
-        <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
-          <Typography variant="h6" gutterBottom align="center">
-            Design Comparison
-          </Typography>
-          <Grid container spacing={2} alignItems="flex-start">
-            {/* Before Image */}
-            <Grid size={6}>
-              <Typography variant="subtitle1" align="center" gutterBottom>
-                Before
-              </Typography>
-              {beforeImageUrl ? (
-                <Box
-                  sx={{ border: '1px solid #ddd', p: 1, background: '#f9f9f9' }}
-                >
-                  <img
-                    src={beforeImageUrl}
-                    alt={`Original Design ${id}`}
-                    style={{ display: 'block', width: '100%', height: 'auto' }}
-                  />
-                </Box>
-              ) : (
-                <Typography color="text.secondary" align="center">
-                  Image not available.
-                </Typography>
-              )}
+      <Grid container spacing={4}>
+        {/* Image Comparison */}
+        <Grid size={12}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 4,
+              borderRadius: 4,
+              background: alpha(theme.palette.background.paper, 0.8),
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <Grid container spacing={4}>
+              {[
+                {
+                  label: 'Original Design',
+                  src: imageUrl,
+                  loading: false,
+                  error: null,
+                },
+                {
+                  label: 'AI Optimized',
+                  src: afterImageUrl,
+                  loading: isGeneratingVariant,
+                  error: variantError,
+                },
+              ].map((img, idx) => (
+                <Grid size={{ xs: 12, md: 6 }} key={idx}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                      boxShadow: theme.shadows[4],
+                      height: 500,
+                      background: theme.palette.background.default,
+                      '&:hover .image-overlay': {
+                        opacity: 1,
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 16,
+                        left: 16,
+                        zIndex: 1,
+                        background: alpha(theme.palette.background.paper, 0.8),
+                        px: 2,
+                        py: 1,
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <FiberManualRecordIcon
+                        sx={{
+                          fontSize: 14,
+                          color:
+                            idx === 0
+                              ? theme.palette.error.main
+                              : theme.palette.success.main,
+                          mr: 1,
+                        }}
+                      />
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        {img.label}
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        p: 2,
+                      }}
+                    >
+                      {img.loading ? (
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <CircularProgress size={48} thickness={4} />
+                          <Typography
+                            variant="body2"
+                            sx={{ mt: 2, color: 'text.secondary' }}
+                          >
+                            Generating optimized version...
+                          </Typography>
+                        </Box>
+                      ) : img.error ? (
+                        <Alert severity="error" sx={{ width: '100%' }}>
+                          {img.error}
+                        </Alert>
+                      ) : img.src ? (
+                        <Box
+                          component="img"
+                          src={img.src}
+                          alt={img.label}
+                          sx={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            borderRadius: 2,
+                            transition: 'transform 0.3s ease',
+                            '&:hover': {
+                              transform: 'scale(1.02)',
+                            },
+                          }}
+                        />
+                      ) : (
+                        <Typography color="text.secondary">
+                          No image available
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                </Grid>
+              ))}
             </Grid>
+          </Paper>
+        </Grid>
 
-            {/* After Image (Placeholder) */}
-            <Grid size={6}>
-              <Typography variant="subtitle1" align="center" gutterBottom>
-                After / Variant
-              </Typography>
-              {afterImageUrl ? ( // Use afterImageUrl state
-                <Box
-                  sx={{ border: '1px solid #ddd', p: 1, background: '#f9f9f9' }}
-                >
-                  <img
-                    src={afterImageUrl}
-                    alt={`Modified Design ${id}`}
-                    style={{ display: 'block', width: '100%', height: 'auto' }}
+        {/* Analysis Sections */}
+        <Grid size={12}>
+          <Grid container spacing={4}>
+            <Grid size={12}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 4,
+                  height: '100%',
+                  background: alpha(theme.palette.background.paper, 0.8),
+                  backdropFilter: 'blur(20px)',
+                  borderRadius: 4,
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <PaletteIcon
+                    sx={{
+                      fontSize: 28,
+                      color: theme.palette.primary.main,
+                      mr: 2,
+                    }}
                   />
-                </Box>
-              ) : (
-                <Box
-                  sx={{
-                    border: '1px dashed #ccc',
-                    p: 1,
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: '200px',
-                    background: '#fafafa',
-                  }}
-                >
-                  <Typography color="text.secondary" align="center">
-                    No 'After' image generated yet.
+                  <Typography variant="h6" fontWeight={600}>
+                    Color & Contrast
                   </Typography>
                 </Box>
-              )}
+                {isAnalyzingContrast ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    <Typography color="text.secondary">Analyzing...</Typography>
+                  </Box>
+                ) : contrastResult ? (
+                  <Box>
+                    <Typography
+                      component="span"
+                      sx={{
+                        fontWeight: 'bold',
+                        color:
+                          contrastResult.status === 'Pass'
+                            ? 'success.main'
+                            : contrastResult.status === 'Fail'
+                              ? 'error.main'
+                              : 'warning.main',
+                      }}
+                    >
+                      Status: {contrastResult.status}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      {contrastResult.notes}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Typography color="text.secondary">No data.</Typography>
+                )}{' '}
+              </Paper>
+            </Grid>
+
+            <Grid size={12}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 4,
+                  height: '100%',
+                  background: alpha(theme.palette.background.paper, 0.8),
+                  backdropFilter: 'blur(20px)',
+                  borderRadius: 4,
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <InsightsIcon
+                    sx={{
+                      fontSize: 28,
+                      color: theme.palette.primary.main,
+                      mr: 2,
+                    }}
+                  />
+                  <Typography variant="h6" fontWeight={600}>
+                    User Journey Simulation
+                  </Typography>
+                </Box>
+                {isAnalyzingJourney ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    <Typography color="text.secondary">
+                      Analyzing with AI...
+                    </Typography>
+                  </Box>
+                ) : journeyError ? (
+                  <Alert severity="error">{journeyError}</Alert>
+                ) : journeyAnalysis ? (
+                  <MarkdownRenderer text={journeyAnalysis} />
+                ) : (
+                  <Typography color="text.secondary">No data.</Typography>
+                )}{' '}
+              </Paper>
+            </Grid>
+
+            {/* A/B Test Section */}
+            <Grid size={12}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 4,
+                  background: alpha(theme.palette.background.paper, 0.8),
+                  backdropFilter: 'blur(20px)',
+                  borderRadius: 4,
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <ScienceIcon
+                    sx={{
+                      fontSize: 28,
+                      color: theme.palette.primary.main,
+                      mr: 2,
+                    }}
+                  />
+                  <Typography variant="h6" fontWeight={600}>
+                    A/B Testing Strategies
+                  </Typography>
+                </Box>
+                {isGeneratingAB ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    <Typography color="text.secondary">
+                      Generating ideas...
+                    </Typography>
+                  </Box>
+                ) : abError ? (
+                  <Alert severity="error">{abError}</Alert>
+                ) : abSuggestions ? (
+                  <MarkdownRenderer text={abSuggestions} />
+                ) : (
+                  <Typography color="text.secondary">No data.</Typography>
+                )}{' '}
+              </Paper>
             </Grid>
           </Grid>
-          {/* TODO: Add controls for switching variants if multiple A/B tests exist */}
-        </Paper>
-
-        {/* Column 2: Analysis & Feedback */}
-        <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-          <Typography variant="h6" gutterBottom>
-            Feedback & Analysis
-          </Typography>
-
-          {/* Contrast Check Section */}
-          <Box mt={2} p={2} border={1} borderColor="divider" borderRadius={1}>
-            <Typography variant="subtitle1" gutterBottom>
-              Contrast Check:
-            </Typography>
-            {isAnalyzingContrast ? (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CircularProgress size={20} sx={{ mr: 1 }} />
-                <Typography color="text.secondary">Analyzing...</Typography>
-              </Box>
-            ) : contrastResult ? (
-              <Box>
-                <Typography
-                  component="span"
-                  sx={{
-                    fontWeight: 'bold',
-                    color:
-                      contrastResult.status === 'Pass'
-                        ? 'success.main'
-                        : contrastResult.status === 'Fail'
-                          ? 'error.main'
-                          : 'warning.main',
-                  }}
-                >
-                  Status: {contrastResult.status}
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  {contrastResult.notes}
-                </Typography>
-              </Box>
-            ) : (
-              <Typography color="text.secondary">
-                Analysis pending or failed.
-              </Typography>
-            )}
-          </Box>
-          <Box mt={2} p={2} border={1} borderColor="divider" borderRadius={1}>
-            <Typography variant="subtitle1" gutterBottom>
-              Simulated User Journey:
-            </Typography>
-            {isAnalyzingJourney ? (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CircularProgress size={20} sx={{ mr: 1 }} />
-                <Typography color="text.secondary">
-                  Analyzing with AI...
-                </Typography>
-              </Box>
-            ) : journeyError ? (
-              <Alert severity="error">{journeyError}</Alert>
-            ) : journeyAnalysis ? (
-              // Render markdown or preformatted text nicely
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {journeyAnalysis}
-              </Typography>
-            ) : (
-              <Typography color="text.secondary">
-                Analysis pending or failed.
-              </Typography>
-            )}
-          </Box>
-          <Box mt={2} p={2} border={1} borderColor="divider" borderRadius={1}>
-            <Typography variant="subtitle1" gutterBottom>
-              A/B Test Suggestions:
-            </Typography>
-            {isGeneratingAB ? (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CircularProgress size={20} sx={{ mr: 1 }} />
-                <Typography color="text.secondary">
-                  Generating ideas...
-                </Typography>
-              </Box>
-            ) : abError ? (
-              <Alert severity="error">{abError}</Alert>
-            ) : abSuggestions ? (
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {abSuggestions}
-              </Typography>
-            ) : (
-              <Typography color="text.secondary">
-                Suggestions pending or failed.
-              </Typography>
-            )}
-          </Box>
-          {/* Add Side-by-Side comparison controls, Heatmap Sim Display here */}
-        </Paper>
-      </Box>
+        </Grid>
+      </Grid>
     </Container>
   );
 };
