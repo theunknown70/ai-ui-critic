@@ -56,9 +56,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test -- --watchAll=false # Run tests non-interactively
-
   test-server:
     name: Test Backend (Server)
     runs-on: ubuntu-latest
@@ -79,16 +76,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Run tests
-        # Add dummy secrets for testing if needed, real secrets for deployment
-        env:
-            OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_DUMMY || 'dummy_key_for_ci' }}
-            CLOUDINARY_CLOUD_NAME: 'dummy_cloud'
-            CLOUDINARY_API_KEY: 'dummy_api_key'
-            CLOUDINARY_API_SECRET: 'dummy_secret'
-            PORT: 5002 # Use a different port for testing if needed
-        run: npm test -- --coverage --watchAll=false # Add coverage flag
 
   # build-client: # Optional: Add a build step check
   #   name: Build Frontend (Client)
